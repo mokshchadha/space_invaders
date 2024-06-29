@@ -1,7 +1,7 @@
 use std::error::Error;
 use std::{io, thread};
 use std::sync::mpsc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use crossterm::{event, ExecutableCommand, terminal};
 use crossterm::cursor::{Hide, Show};
 use crossterm::event::{Event, KeyCode};
@@ -36,18 +36,23 @@ fn main() -> Result<(), Box<dyn Error>> {
     });
 
     let mut player = Player::new();
-
+    let mut instant = Instant::now();
     //game loop
     'gameloop: loop {
         //per frame init
         let mut curr_frame = new_frame();
-
+        let delta = instant.elapsed();
 
         while event::poll(Duration::default())? {
             if let Event::Key(key_event) = event::read()? {
                 match key_event.code {
                     KeyCode::Left => player.move_left(),
                     KeyCode::Right => player.move_right(),
+                    KeyCode::Char(' ') => {
+                        if player.shoot(){
+                            // can play some sound
+                        }
+                    }
                     KeyCode::Esc | KeyCode::Char('q') => {
                         break 'gameloop;
                     }
@@ -55,6 +60,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
         }
+
+        //updates
+        player.update(delta);
+
         // draw and render
         player.draw(&mut curr_frame);
         let _ = render_tx.send(curr_frame);
